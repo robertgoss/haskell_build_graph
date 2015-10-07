@@ -19,7 +19,8 @@ parsePackage string = fmap fromGenericPackage parseMaybe
 --Convert a generic package to a global package
 fromGenericPackage :: PD.GenericPackageDescription -> PackageGlobal
 fromGenericPackage genericPackage = Package {
-                                        globalProperties = toGlobalPackageData (PD.packageDescription genericPackage)
+                                        globalProperties = toGlobalPackageData (PD.packageDescription genericPackage),
+                                        flags = (PD.genPackageFlags genericPackage)
                                     }
 
 --Convert a package description to global properties

@@ -3,6 +3,7 @@ module Package where
 import Data.Version(Version)
 import Distribution.Package(PackageName)
 import Distribution.Version(VersionRange)
+import Distribution.PackageDescription(Flag)
 
 import Data.Map(Map)
 
@@ -26,7 +27,7 @@ data PackageConditional conditional = Package {
   tests :: [TestSuite conditional], -- Executable build targets kept in conditional form.
   benchmarks :: [Benchmark conditional], -- Executable build targets kept in conditional form.
   --Flags the various flags availible and their deafault level
-  flags :: [ConfigurationFlag]
+  flags :: [Flag]
 }
 
 --Types of packages with different levels of conditionality.
@@ -68,14 +69,6 @@ data GlobalPackageData = GlobalPackageData {
     homepage :: Maybe URL, --Optional, homepage of the package.
     bugReports :: Maybe URL, --Optional, webaddress to send bug reports to.
     packageUrl :: Maybe URL --Optional, webaddress source of the package.
-}
-
---A data structure to represent a configuration flag
-data ConfigurationFlag = ConfigurationFlag {
-     flagName :: String, -- The name of to identify this flag.
-     flagDefault :: Bool, -- Does this flag default to true or false.
-     flagDescription :: String, --A description of this flag.
-     manual :: Bool --If this flag can be negated from the default in dependence resolution.
 }
 
 --A helper type
