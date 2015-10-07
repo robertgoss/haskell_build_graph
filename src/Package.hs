@@ -18,7 +18,9 @@ data Package conditional = Package {
   library :: Maybe (Library conditional), -- Optional Conditional library build target.
   executables :: [Executable conditional], -- Executable build targets kept in conditional form.
   tests :: [TestSuite conditional], -- Executable build targets kept in conditional form.
-  benchmarks :: [Benchmark conditional] -- Executable build targets kept in conditional form.
+  benchmarks :: [Benchmark conditional], -- Executable build targets kept in conditional form.
+  --Flags the various flags availible and their deafault level
+  flags :: [ConfigurationFlag]
 }
 
 
