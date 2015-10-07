@@ -1,6 +1,10 @@
 module Package where
 
+import Distribution.Version(VersionRange)
+
 import Data.Map(Map)
+
+import Conditional
 
 --A series of data structures to represent a cabal package for building
 --We want to seperate the (pure) conditional package (etc) from the one which
@@ -12,7 +16,7 @@ import Data.Map(Map)
 
 --A package is given by it's global data and the various build targets which are kept at the conditional level
 --As there are differing types of conditioning levels depending on if the result is global, on a package or resolved with all flags
-data Package conditional = Package {
+data PackageConditional conditional = Package {
   globalProperties :: GlobalPackageData, --The global properties of the package.
   --BuildTargets
   library :: Maybe (Library conditional), -- Optional Conditional library build target.
@@ -22,6 +26,12 @@ data Package conditional = Package {
   --Flags the various flags availible and their deafault level
   flags :: [ConfigurationFlag]
 }
+
+--Types of packages with different levels of conditionality.
+type Package = PackageFlagged -- A type of package to type and build.
+type PackageFlagged = PackageConditional Bool --All conditionals have been resolved and flags have been set.
+type PackagePlatform = PackageConditional FlagConditional -- The package has been resolved to a platform only flags need to be set.
+type PackageGlobal = PackageConditional PlatformConditional -- The package has had no conditionals resolved is it not specifed to a platform.
 
 
 --Helper types
@@ -36,10 +46,6 @@ type URL = String --A web url address.
 type Version = [Int] -- A hiarachical version number red right to left.
 type LicenseType = String -- The type of license used.
 type PackageName = String --The name of a package without version information 
-
---A data structure to represent the compilier version
-data Compiler = GHC | JHC | UHC | LHC --The valid haskell compiler flavours
-data CompilerVersion = CompilerVersion Compiler VersionConstraint -- The compiler and a version range
 
 --Represent the global package data from the
 --Not specific to any particular platform or build.
@@ -65,31 +71,6 @@ data GlobalPackageData = GlobalPackageData {
     packageUrl :: Maybe URL --Optional, webaddress source of the package.
 }
 
---Conditional package dependencies for each of the build targets.
-
---A data structure to represent version constraint.
-data VersionConstraint = NoConstraint --No constraint on the version
-                       | Exact Version --An exact version 
-                       | LessThan Version --Less than a given version number
-                       | GreaterThan Version --Greater than a given version number
-                       | Intersect VersionConstraint VersionConstraint --Bth version constraints need to hold
-                       | Union VersionConstraint VersionConstraint --Either version constraint can hold.
-
---A data stucture to hold the conditionals that cabal can have
-data ConditionalType = OpertionSystem String -- Tests if the platform operating system is the given string
-                     | Architecture String --Tests if the platform architecture is the given string
-                     | Implimentaton CompilerVersion --Tests the platform compiler version
-                     | Flag String --Tests the setting of the given flag on the given platform
-                     | Logic Bool --Returns the given boolean
-                     | And ConditionalType ConditionalType --If both conditionals hold
-                     | Or ConditionalType ConditionalType--If either conditional hold
-                     | Not ConditionalType --If the conditional does not hold
-
---A value wrapped with an assosiated conditional
---A value is either included or not dependent on the evaluation of the conditional
-data Conditional a = Conditional ConditionalType a
-
-
 --A data structure to represent a configuration flag
 data ConfigurationFlag = ConfigurationFlag {
      flagName :: String, -- The name of to identify this flag.
@@ -98,11 +79,9 @@ data ConfigurationFlag = ConfigurationFlag {
      manual :: Bool --If this flag can be negated from the default in dependence resolution.
 }
 
---Some helper type synonyms
-type ModuleName = [String] --Full path module name.
-type ReexportPath = (PackageName, ModuleName, ModuleName) --A triple of the the package to reexport from
-                                                          --The original module name
-                                                          --The new name to expose the module as.
+--A helper type
+--Represents a build dependency is a pair of package and a version constraint
+type PackageDependency = (PackageName, VersionRange)
 
 --A data structure to represent a cabal libray with fields wrapped in conditionals
 -- These conditionals may be trivial (ie boolean true).
@@ -130,7 +109,3 @@ data Benchmark conditional = Benchmark {
   benchmarkTargetName :: String, --The name of this benchmark target
   benchmarkBuildDependencies :: [(conditional,PackageDependency)] --The build dependencies of this benchmark dependent on the platform and flags
 }
-
---A helper type
---Represents a build dependency is a pair of package and a version constraint
-type PackageDependency = (PackageName, VersionConstraint)
