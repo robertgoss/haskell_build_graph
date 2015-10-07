@@ -1,5 +1,7 @@
 module Package where
 
+import Data.Version(Version)
+import Distribution.Package(PackageName)
 import Distribution.Version(VersionRange)
 
 import Data.Map(Map)
@@ -43,9 +45,7 @@ type Filename = String -- The system address of a file
 type WildcardFilename = String --The a pattern for the system address of some files
                                -- must be in the form of dir/*.extension with no other wildcard.
 type URL = String --A web url address.
-type Version = [Int] -- A hiarachical version number red right to left.
 type LicenseType = String -- The type of license used.
-type PackageName = String --The name of a package without version information 
 
 --Represent the global package data from the
 --Not specific to any particular platform or build.
@@ -60,8 +60,7 @@ data GlobalPackageData = GlobalPackageData {
     category :: Maybe String, --Optional, classification of the package with hackage category.
     stability :: Maybe String, --Optional, the stability of the package alpha, beta etc.
       --License information
-    license :: Maybe LicenseType, -- Optional, type of the license this package uses.
-    licenseFiles :: [Filename], -- List of files for licenses, can be empty.
+    license :: LicenseType, -- Type of the license this package uses.
     copyright :: Maybe String, -- Optional, copyright notice.
       --People and addresses.
     author :: Maybe String, -- Optional, original author of the package.
