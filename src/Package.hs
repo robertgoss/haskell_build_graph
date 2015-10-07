@@ -54,8 +54,8 @@ data Package = Package {
     configurationFlags :: [ConfigurationFlag], --Configuration flags that can appear in the library or executable  
     --Libraries
     --
-    libraries :: [LibraryConditional], --The avalible executables still in executable form
-                                       --Ie the conditionals have not been reduced for the build system.
+    libraries :: Maybe LibraryConditional, --The optional library still in conditional form
+                                           --Ie the conditionals have not been reduced for the build system.
     --Executables
     --
     executables :: [ExecutableConditional], --The avalible executables still in executable form
