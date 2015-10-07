@@ -3,7 +3,14 @@ module Package where
 import Data.Map(Map)
 
 --A series of data structures to represent a cabal package for building
---
+--We want to seperate the (pure) conditional package (etc) from the one which
+--is platform dependent. We use our own class here to clear up these destinctions
+-- Unlike in the cabal data structures. 
+--As we would like to have a database with information common to all
+--Also it helps us to have control over the data structures when using persistence.
+
+
+
 --Helper types
 -- Some helper structured types for fields
 -- These add readability to descriptors
