@@ -11,13 +11,14 @@ import Data.Map(Map)
 
 
 --A package is given by it's global data and the various build targets which are kept at the conditional level
-data PackageConditional = PackageConditional {
+--As there are differing types of conditioning levels depending on if the result is global, on a package or resolved with all flags
+data Package conditional = Package {
   globalProperties :: GlobalPackageData, --The global properties of the package.
   --BuildTargets
-  library :: Maybe LibraryConditional, -- Optional Conditional library build target.
-  executables :: [ExecutableConditional], -- Executable build targets kept in conditional form.
-  tests :: [TestConditional], -- Executable build targets kept in conditional form.
-  benchmarks :: [BenchmarkConditional] -- Executable build targets kept in conditional form.
+  library :: Maybe (Library conditional), -- Optional Conditional library build target.
+  executables :: [Executable conditional], -- Executable build targets kept in conditional form.
+  tests :: [TestSuite conditional], -- Executable build targets kept in conditional form.
+  benchmarks :: [Benchmark conditional] -- Executable build targets kept in conditional form.
 }
 
 
@@ -103,29 +104,29 @@ type ReexportPath = (PackageName, ModuleName, ModuleName) --A triple of the the 
 
 --A data structure to represent a cabal libray with fields wrapped in conditionals
 -- These conditionals may be trivial (ie boolean true).
-data LibraryConditional = LibraryConditional {
-  libraryBuildDependencies :: [Conditional PackageDependency] --The build dependencies of this library dependent on the platform and flags
+data Library conditional = Library {
+  libraryBuildDependencies :: [conditional PackageDependency] --The build dependencies of this library dependent on the platform and flags
 }
 
 --A data structure to represent a cabal executable with fields wrapped in conditionals
 -- These conditionals may be trivial (ie boolean true).
-data ExecutableConditional = ExecutableConditional {
+data Executable conditional = Executable {
   executableTargetName :: String, --The name of this executable target
-  executableBuildDependencies :: [Conditional PackageDependency] --The build dependencies of this executable dependent on the platform and flags
+  executableBuildDependencies :: [conditional PackageDependency] --The build dependencies of this executable dependent on the platform and flags
 }
 
 --A data structure to represent a cabal test suite with fields wrapped in conditionals
 -- These conditionals may be trivial (ie boolean true).
-data TestConditional = TestConditional {
+data TestSuite conditional = TestSuite {
   testTargetName :: String, --The name of this test target
-  testBuildDependencies :: [Conditional PackageDependency] --The build dependencies of this test dependent on the platform and flags
+  testBuildDependencies :: [conditional PackageDependency] --The build dependencies of this test dependent on the platform and flags
 }
 
 --A data structure to represent a cabal benchmark with fields wrapped in conditionals
 -- These conditionals may be trivial (ie boolean true).
-data BenchmarkConditional = BenchmarkConditional {
+data Benchmark conditional = Benchmark {
   benchmarkTargetName :: String, --The name of this benchmark target
-  benchmarkBuildDependencies :: [Conditional PackageDependency] --The build dependencies of this benchmark dependent on the platform and flags
+  benchmarkBuildDependencies :: [conditional PackageDependency] --The build dependencies of this benchmark dependent on the platform and flags
 }
 
 --A helper type
