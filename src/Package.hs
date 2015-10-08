@@ -1,7 +1,7 @@
 module Package where
 
 import Data.Version(Version)
-import Distribution.Package(PackageName)
+import Distribution.Package(PackageName, Dependency)
 import Distribution.Version(VersionRange)
 import Distribution.PackageDescription(Flag)
 
@@ -71,33 +71,30 @@ data GlobalPackageData = GlobalPackageData {
     packageUrl :: Maybe URL --Optional, webaddress source of the package.
 }
 
---A helper type
---Represents a build dependency is a pair of package and a version constraint
-type PackageDependency = (PackageName, VersionRange)
 
 --A data structure to represent a cabal libray with fields wrapped in conditionals
 -- These conditionals may be trivial (ie boolean true).
 data Library conditional = Library {
-  libraryBuildDependencies :: [(conditional,PackageDependency)] --The build dependencies of this library dependent on the platform and flags
+  libraryBuildDependencies :: [(conditional,Dependency)] --The build dependencies of this library dependent on the platform and flags
 }
 
 --A data structure to represent a cabal executable with fields wrapped in conditionals
 -- These conditionals may be trivial (ie boolean true).
 data Executable conditional = Executable {
   executableTargetName :: String, --The name of this executable target
-  executableBuildDependencies :: [(conditional,PackageDependency)] --The build dependencies of this executable dependent on the platform and flags
+  executableBuildDependencies :: [(conditional,Dependency)] --The build dependencies of this executable dependent on the platform and flags
 }
 
 --A data structure to represent a cabal test suite with fields wrapped in conditionals
 -- These conditionals may be trivial (ie boolean true).
 data TestSuite conditional = TestSuite {
   testTargetName :: String, --The name of this test target
-  testBuildDependencies :: [(conditional,PackageDependency)] --The build dependencies of this test dependent on the platform and flags
+  testBuildDependencies :: [(conditional,Dependency)] --The build dependencies of this test dependent on the platform and flags
 }
 
 --A data structure to represent a cabal benchmark with fields wrapped in conditionals
 -- These conditionals may be trivial (ie boolean true).
 data Benchmark conditional = Benchmark {
   benchmarkTargetName :: String, --The name of this benchmark target
-  benchmarkBuildDependencies :: [(conditional,PackageDependency)] --The build dependencies of this benchmark dependent on the platform and flags
+  benchmarkBuildDependencies :: [(conditional,Dependency)] --The build dependencies of this benchmark dependent on the platform and flags
 }

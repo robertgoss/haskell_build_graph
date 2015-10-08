@@ -1,20 +1,23 @@
 module Conditional where
 
 import Distribution.Version(VersionRange)
+import Distribution.System(OS,Arch)
+import Distribution.Compiler(CompilerFlavor)
 
 --A data structure to represent the compilier version
-data Compiler = GHC | JHC | UHC | LHC --The valid haskell compiler flavours
+type Compiler = CompilerFlavor --The valid haskell compiler flavours
 data CompilerVersion = CompilerVersion Compiler VersionRange -- The compiler and a version range
 
 --A data stucture to hold the conditionals that cabal can ask of the platform
-data PlatformBasicConditional = OpertionSystem String -- Tests if the platform operating system is the given string
-                              | Architecture String --Tests if the platform architecture is the given string
+data PlatformBasicConditional = OperatingSystem OS -- Tests if the platform operating system is the given string
+                              | Architecture Arch --Tests if the platform architecture is the given string
                               | Implimentaton CompilerVersion --Tests the platform compiler version
 --A data structure to hold the conditionals that cabal can ask of a configuration flag
 data FlagBasicConditional = Flag String --Tests the setting of the given flag on the given platform
 
 --The combinators that can be used to combine conditionals
 data ConditionalTree cond = Logic Bool --Returns the given boolean
+                          | Var cond --A basic conditonal variable
                           | And (ConditionalTree cond) (ConditionalTree cond) --If both conditionals hold
                           | Or (ConditionalTree cond) (ConditionalTree cond) --If either conditional hold
                           | Not (ConditionalTree cond) --If the conditional does not hold
