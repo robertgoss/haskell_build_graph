@@ -1,4 +1,4 @@
-module Package where
+module Cabal.Package where
 
 import Data.Version(Version)
 import Distribution.Package(PackageName, Dependency)
@@ -7,7 +7,7 @@ import Distribution.PackageDescription(Flag)
 
 import Data.Map(Map)
 
-import Conditional
+import Cabal.Conditional
 
 --A series of data structures to represent a cabal package for building
 --We want to seperate the (pure) conditional package (etc) from the one which

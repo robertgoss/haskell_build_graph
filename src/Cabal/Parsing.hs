@@ -1,11 +1,11 @@
-module Parsing where
+module Cabal.Parsing where
 
 import Distribution.Package
 import Distribution.PackageDescription.Parse
 import qualified Distribution.PackageDescription as PD
 
-import Package
-import Conditional
+import Cabal.Package
+import Cabal.Conditional
 
 --Use cabal parsing to get a generic package and then form a package global
 --Package parsing function

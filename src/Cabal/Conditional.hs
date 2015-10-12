@@ -1,4 +1,4 @@
-module Conditional where
+module Cabal.Conditional where
 
 import Distribution.Version(VersionRange)
 import Distribution.System(OS,Arch)
