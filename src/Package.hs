@@ -31,10 +31,10 @@ data PackageConditional conditional = Package {
 }
 
 --Types of packages with different levels of conditionality.
-type Package = PackageFlagged -- A type of package to type and build.
-type PackageFlagged = PackageConditional Bool --All conditionals have been resolved and flags have been set.
-type PackagePlatform = PackageConditional FlagConditional -- The package has been resolved to a platform only flags need to be set.
-type PackageGlobal = PackageConditional PlatformConditional -- The package has had no conditionals resolved is it not specifed to a platform.
+type Package = BuildPackage -- A type of package to build.
+type BuildPackage = PackageConditional Bool --All conditionals have been resolved and flags have been set.
+type PlatformPackage = PackageConditional FlagConditional -- The package has been resolved to a platform only flags need to be set.
+type GlobalPackage = PackageConditional PlatformConditional -- The package has had no conditionals resolved is it not specifed to a platform.
 
 
 --Helper types

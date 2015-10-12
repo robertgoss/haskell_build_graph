@@ -10,7 +10,7 @@ import Conditional
 --Use cabal parsing to get a generic package and then form a package global
 --Package parsing function
 --Throw away errors and warnings and turn into a maybe
-parsePackage :: String -> Maybe PackageGlobal
+parsePackage :: String -> Maybe GlobalPackage
 parsePackage string = fmap fromGenericPackage parseMaybe
   where parseResult = parsePackageDescription string
         parseMaybe = case parseResult of
@@ -18,7 +18,7 @@ parsePackage string = fmap fromGenericPackage parseMaybe
                         (ParseOk _ genericPackage) -> Just genericPackage
 
 --Convert a generic package to a global package
-fromGenericPackage :: PD.GenericPackageDescription -> PackageGlobal
+fromGenericPackage :: PD.GenericPackageDescription -> GlobalPackage
 fromGenericPackage genericPackage = Package {
                                         globalProperties = toGlobalPackageData (PD.packageDescription genericPackage),
                                         flags = (PD.genPackageFlags genericPackage),
