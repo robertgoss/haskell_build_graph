@@ -14,6 +14,7 @@ import Database.Persist.Sqlite
 import Control.Monad.IO.Class (liftIO)
 
 import qualified Cabal.Package as P
+import qualified Database.Fields as Field(Version,PackageName)
 
 
 --Construct the database models for the data structures used in the cabal models
@@ -22,8 +23,8 @@ import qualified Cabal.Package as P
 
 mkPersist sqlSettings [persistLowerCase|
 GlobalPackageData
-    name String
-    version String
+    name Field.PackageName
+    version Field.Version
     synopsis String Maybe
     description String Maybe
     category String Maybe
@@ -43,8 +44,8 @@ GlobalPackageData
 
 fromGlobalPackageDataModel :: P.GlobalPackageData -> GlobalPackageData
 fromGlobalPackageDataModel globalPackageData = GlobalPackageData {
-  globalPackageDataName = show $ P.name globalPackageData,
-  globalPackageDataVersion = show $ P.version globalPackageData,
+  globalPackageDataName = P.name globalPackageData,
+  globalPackageDataVersion = P.version globalPackageData,
   globalPackageDataSynopsis = P.synopsis globalPackageData,
   globalPackageDataDescription = P.description globalPackageData,
   globalPackageDataCategory = P.category globalPackageData,
@@ -60,8 +61,8 @@ fromGlobalPackageDataModel globalPackageData = GlobalPackageData {
 
 toGlobalPackageDataModel :: GlobalPackageData -> P.GlobalPackageData
 toGlobalPackageDataModel globalPackageDataModel = P.GlobalPackageData {
-  P.name = read $ globalPackageDataName globalPackageDataModel,
-  P.version = read $ globalPackageDataVersion globalPackageDataModel,
+  P.name = globalPackageDataName globalPackageDataModel,
+  P.version = globalPackageDataVersion globalPackageDataModel,
   P.synopsis = globalPackageDataSynopsis globalPackageDataModel,
   P.description = globalPackageDataDescription globalPackageDataModel,
   P.category = globalPackageDataCategory globalPackageDataModel,
