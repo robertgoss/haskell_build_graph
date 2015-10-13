@@ -14,14 +14,14 @@ import Database.Persist.Sqlite
 import Control.Monad.IO.Class (liftIO)
 
 import qualified Cabal.Package as P
-import qualified Database.Fields as Field(Version,PackageName)
+import qualified Database.Fields as Field(Version,PackageName,VersionRange,PlatformConditionalType)
 
 
 --Construct the database models for the data structures used in the cabal models
 --Add interfaces between them
 
-
 mkPersist sqlSettings [persistLowerCase|
+--Global package data a gloss over the package version
 GlobalPackageData
     name Field.PackageName
     version Field.Version
@@ -37,7 +37,48 @@ GlobalPackageData
     bugReports String Maybe
     packageUrl String Maybe
     deriving Show
+--A global package with no platform localisation or flags set.
+--Motly has inverse maps for things
+GlobalPackage
+    packageData GlobalPackageData --Associated package data
+--A global version of a library with no platform localisation or flags set.
+--Has inverse maps for dependencies
+GlobalLibrary
+    package GlobalPackage
+GlobalLibraryDependency
+    library GlobalLibrary
+    condition Field.PlatformConditionalType
+    dependance Field.VersionRange
+--A global version of a executable with no platform localisation or flags set.
+--Has inverse maps for dependencies
+GlobalExecutable
+    name String
+    package GlobalPackage
+GlobalExecutableDependency
+    executable GlobalExecutable
+    condition Field.PlatformConditionalType
+    dependance Field.VersionRange
+--A global version of a test suite with no platform localisation or flags set.
+--Has inverse maps for dependencies
+GlobalTest
+    name String
+    package GlobalPackage
+GlobalTestDependency
+    test GlobalTest
+    condition Field.PlatformConditionalType
+    dependance Field.VersionRange
+--A global version of a benchmark with no platform localisation or flags set.
+--Has inverse maps for dependencies
+GlobalBenchmark
+    name String
+    package GlobalPackage
+GlobalBenchmarkDependency
+    benchmark GlobalBenchmark
+    condition Field.PlatformConditionalType
+    dependance Field.VersionRange
 |]
+
+--
 
 
 --Convert to/from the cabal modules
