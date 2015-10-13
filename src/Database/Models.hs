@@ -17,7 +17,9 @@ import Data.Maybe(fromJust)
 
 import Cabal.Conditional(PlatformConditional,unwrapPlatformConditionalType)
 import qualified Cabal.Package as P
-import qualified Database.Fields as Field(Version,PackageName,Dependency,PlatformConditionalType)
+import qualified Database.Fields as Field(Version,PackageName,Dependency,PlatformConditionalType,FlagName)
+
+import qualified Distribution.PackageDescription as PD
 
 
 --Construct the database models for the data structures used in the cabal models
@@ -82,6 +84,13 @@ GlobalBenchmarkDependency
     benchmark GlobalBenchmarkId
     condition Field.PlatformConditionalType
     dependance Field.Dependency
+--Flag for a configuration
+Flag
+    package GlobalPackageId --Package this flag is attached to
+    name Field.FlagName --name of the flag 
+    description String
+    default Bool
+    manual Bool
 |]
 
 --
@@ -141,6 +150,15 @@ fromBenchmarkDep :: GlobalBenchmarkDependency -> (PlatformConditional, Field.Dep
 fromBenchmarkDep benDep = (condition, globalBenchmarkDependencyDependance benDep)
   where condition = unwrapPlatformConditionalType $ globalBenchmarkDependencyCondition benDep
 
+--Convert a flag model  to a package flag
+fromFlag :: Flag -> PD.Flag
+fromFlag flag = PD.MkFlag {
+  PD.flagName = flagName flag,
+  PD.flagDescription = flagDescription flag,
+  PD.flagDefault = flagDefault flag,
+  PD.flagManual = flagManual flag
+}
+
 --Queries for getting a global package
 --Big set of queries as need many invere maps
 getGlobalPackage name version = do --Get package then build targets
@@ -158,13 +176,17 @@ getGlobalPackage name version = do --Get package then build targets
                                    --Get benchmark
                                    benchmarkEnities <- selectList [GlobalBenchmarkPackage ==. entityKey pkgEntity] []
                                    benchmarks <- mapM getGlobalBenchmark benchmarkEnities
+                                   --Get flags
+                                   flagEnities <- selectList [FlagPackage ==. entityKey pkgEntity] []
+                                   let flags  = map (fromFlag . entityVal) flagEnities
                                    --Return package
                                    return P.Package {
                                      P.globalProperties = toGlobalPackageData name version globalPackageData,
                                      P.library = libraryM,
                                      P.executables = executables,
                                      P.tests = tests,
-                                     P.benchmarks = benchmarks
+                                     P.benchmarks = benchmarks,
+                                     P.flags = flags
                                    }
     where --Subqueries to get build targets
           --Get global library from a packag key wrapped in a maybe as not needed to exist in package
