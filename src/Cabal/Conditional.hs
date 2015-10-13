@@ -12,6 +12,7 @@ data CompilerVersion = CompilerVersion Compiler VersionRange -- The compiler and
 data PlatformBasicConditional = OperatingSystem OS -- Tests if the platform operating system is the given string
                               | Architecture Arch --Tests if the platform architecture is the given string
                               | Implimentaton CompilerVersion --Tests the platform compiler version
+
 --A data structure to hold the conditionals that cabal can ask of a configuration flag
 data FlagBasicConditional = Flag String --Tests the setting of the given flag on the given platform
 
