@@ -13,8 +13,11 @@ import Database.Persist.TH
 import Database.Persist.Sqlite
 import Control.Monad.IO.Class (liftIO)
 
+import Data.Maybe(fromJust)
+
+import Cabal.Conditional(PlatformConditional,unwrapPlatformConditionalType)
 import qualified Cabal.Package as P
-import qualified Database.Fields as Field(Version,PackageName,VersionRange,PlatformConditionalType)
+import qualified Database.Fields as Field(Version,PackageName,Dependency,PlatformConditionalType)
 
 
 --Construct the database models for the data structures used in the cabal models
@@ -22,9 +25,8 @@ import qualified Database.Fields as Field(Version,PackageName,VersionRange,Platf
 
 mkPersist sqlSettings [persistLowerCase|
 --Global package data a gloss over the package version
+--With name and version moved to package
 GlobalPackageData
-    name Field.PackageName
-    version Field.Version
     synopsis String Maybe
     description String Maybe
     category String Maybe
@@ -40,42 +42,46 @@ GlobalPackageData
 --A global package with no platform localisation or flags set.
 --Motly has inverse maps for things
 GlobalPackage
-    packageData GlobalPackageData --Associated package data
+    name Field.PackageName
+    version Field.Version
+    packageData GlobalPackageDataId --Associated package data
+    PackageIdentifier name version --Unique identifier for a package with name and version
 --A global version of a library with no platform localisation or flags set.
 --Has inverse maps for dependencies
 GlobalLibrary
-    package GlobalPackage
+    package GlobalPackageId
+    GlobalLibraryUniquePackage package --The package should be unique
 GlobalLibraryDependency
-    library GlobalLibrary
+    library GlobalLibraryId
     condition Field.PlatformConditionalType
-    dependance Field.VersionRange
+    dependance Field.Dependency
 --A global version of a executable with no platform localisation or flags set.
 --Has inverse maps for dependencies
 GlobalExecutable
     name String
-    package GlobalPackage
+    package GlobalPackageId
 GlobalExecutableDependency
-    executable GlobalExecutable
+    executable GlobalExecutableId
     condition Field.PlatformConditionalType
-    dependance Field.VersionRange
+    dependance Field.Dependency
 --A global version of a test suite with no platform localisation or flags set.
 --Has inverse maps for dependencies
 GlobalTest
     name String
-    package GlobalPackage
+    package GlobalPackageId
 GlobalTestDependency
-    test GlobalTest
+    test GlobalTestId
     condition Field.PlatformConditionalType
-    dependance Field.VersionRange
+    dependance Field.Dependency
 --A global version of a benchmark with no platform localisation or flags set.
 --Has inverse maps for dependencies
 GlobalBenchmark
     name String
-    package GlobalPackage
+    package GlobalPackageId
 GlobalBenchmarkDependency
-    benchmark GlobalBenchmark
+    benchmark GlobalBenchmarkId
     condition Field.PlatformConditionalType
-    dependance Field.VersionRange
+    dependance Field.Dependency
 |]
 
 --
@@ -85,8 +91,6 @@ GlobalBenchmarkDependency
 
 fromGlobalPackageDataModel :: P.GlobalPackageData -> GlobalPackageData
 fromGlobalPackageDataModel globalPackageData = GlobalPackageData {
-  globalPackageDataName = P.name globalPackageData,
-  globalPackageDataVersion = P.version globalPackageData,
   globalPackageDataSynopsis = P.synopsis globalPackageData,
   globalPackageDataDescription = P.description globalPackageData,
   globalPackageDataCategory = P.category globalPackageData,
@@ -100,10 +104,10 @@ fromGlobalPackageDataModel globalPackageData = GlobalPackageData {
   globalPackageDataPackageUrl = P.packageUrl globalPackageData
 }
 
-toGlobalPackageDataModel :: GlobalPackageData -> P.GlobalPackageData
-toGlobalPackageDataModel globalPackageDataModel = P.GlobalPackageData {
-  P.name = globalPackageDataName globalPackageDataModel,
-  P.version = globalPackageDataVersion globalPackageDataModel,
+toGlobalPackageData :: Field.PackageName -> Field.Version -> GlobalPackageData -> P.GlobalPackageData
+toGlobalPackageData name version globalPackageDataModel = P.GlobalPackageData {
+  P.name = name,
+  P.version = version,
   P.synopsis = globalPackageDataSynopsis globalPackageDataModel,
   P.description = globalPackageDataDescription globalPackageDataModel,
   P.category = globalPackageDataCategory globalPackageDataModel,
@@ -116,3 +120,85 @@ toGlobalPackageDataModel globalPackageDataModel = P.GlobalPackageData {
   P.bugReports = globalPackageDataBugReports globalPackageDataModel,
   P.packageUrl = globalPackageDataPackageUrl globalPackageDataModel
 }
+
+--Convert a library dependance into a (condition, dependancy pair)
+fromLibraryDep :: GlobalLibraryDependency -> (PlatformConditional, Field.Dependency)
+fromLibraryDep libDep = (condition, globalLibraryDependencyDependance libDep)
+  where condition = unwrapPlatformConditionalType $ globalLibraryDependencyCondition libDep
+
+--Convert a executable dependance into a (condition, dependancy pair)
+fromExecutableDep :: GlobalExecutableDependency -> (PlatformConditional, Field.Dependency)
+fromExecutableDep exeDep = (condition, globalExecutableDependencyDependance exeDep)
+  where condition = unwrapPlatformConditionalType $ globalExecutableDependencyCondition exeDep
+
+--Convert a test dependance into a (condition, dependancy pair)
+fromTestDep :: GlobalTestDependency -> (PlatformConditional, Field.Dependency)
+fromTestDep testDep = (condition, globalTestDependencyDependance testDep)
+  where condition = unwrapPlatformConditionalType $ globalTestDependencyCondition testDep
+
+--Convert a benchmark dependance into a (condition, dependancy pair)
+fromBenchmarkDep :: GlobalBenchmarkDependency -> (PlatformConditional, Field.Dependency)
+fromBenchmarkDep benDep = (condition, globalBenchmarkDependencyDependance benDep)
+  where condition = unwrapPlatformConditionalType $ globalBenchmarkDependencyCondition benDep
+
+--Queries for getting a global package
+--Big set of queries as need many invere maps
+getGlobalPackage name version = do --Get package then build targets
+                                   pkgEntity <- fmap fromJust . getBy $ PackageIdentifier name version
+                                   --Get global data
+                                   globalPackageData <- fmap fromJust . get . globalPackagePackageData $ entityVal pkgEntity
+                                   --Get library (maybe)
+                                   libraryM <- getGlobalLibrary $ entityKey pkgEntity
+                                   --Get executables
+                                   executableEnities <- selectList [GlobalExecutablePackage ==. entityKey pkgEntity] []
+                                   executables <- mapM getGlobalExecutable executableEnities
+                                   --Get test
+                                   testEnities <- selectList [GlobalTestPackage ==. entityKey pkgEntity] []
+                                   tests <- mapM getGlobalTest testEnities
+                                   --Get benchmark
+                                   benchmarkEnities <- selectList [GlobalBenchmarkPackage ==. entityKey pkgEntity] []
+                                   benchmarks <- mapM getGlobalBenchmark benchmarkEnities
+                                   --Return package
+                                   return P.Package {
+                                     P.globalProperties = toGlobalPackageData name version globalPackageData,
+                                     P.library = libraryM,
+                                     P.executables = executables,
+                                     P.tests = tests,
+                                     P.benchmarks = benchmarks
+                                   }
+    where --Subqueries to get build targets
+          --Get global library from a packag key wrapped in a maybe as not needed to exist in package
+          getGlobalLibrary packageKey 
+              = do libraryEntityM <- getBy $ GlobalLibraryUniquePackage packageKey
+                   case libraryEntityM of
+                      Nothing -> return Nothing
+                      Just libraryEntity -> 
+                             do dependenceEntities <- selectList [GlobalLibraryDependencyLibrary ==. entityKey libraryEntity] []
+                                let dependences = map (fromLibraryDep . entityVal) dependenceEntities
+                                return $ Just P.Library {
+                                  P.libraryBuildDependencies = dependences
+                                }
+          --Get executable from a global executable entity
+          getGlobalExecutable executableEntity
+              = do dependenceEntities <- selectList [GlobalExecutableDependencyExecutable ==. entityKey executableEntity] []
+                   let dependences = map (fromExecutableDep . entityVal) dependenceEntities
+                   return P.Executable {
+                     P.executableTargetName = globalExecutableName $ entityVal executableEntity,
+                     P.executableBuildDependencies = dependences
+                   }
+          --Get test from a global test entity
+          getGlobalTest testEntity
+              = do dependenceEntities <- selectList [GlobalTestDependencyTest ==. entityKey testEntity] []
+                   let dependences = map (fromTestDep . entityVal) dependenceEntities
+                   return P.TestSuite {
+                     P.testTargetName = globalTestName $ entityVal testEntity,
+                     P.testBuildDependencies = dependences
+                   }
+          --Get benchmark from a global benchmark entity
+          getGlobalBenchmark benchmarkEntity
+              = do dependenceEntities <- selectList [GlobalBenchmarkDependencyBenchmark ==. entityKey benchmarkEntity] []
+                   let dependences = map (fromBenchmarkDep . entityVal) dependenceEntities
+                   return P.Benchmark {
+                     P.benchmarkTargetName = globalBenchmarkName $ entityVal benchmarkEntity,
+                     P.benchmarkBuildDependencies = dependences
+                   }
