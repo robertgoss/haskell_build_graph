@@ -34,4 +34,5 @@ type FlagConditional = ConditionalTree FlagBasicConditional
 type PlatformConditional = ConditionalTree (Either PlatformBasicConditional FlagBasicConditional)
 --Newtype container for a platform conditional
 newtype PlatformConditionalType = PlatformConditional PlatformConditional deriving(Eq,Show,Read)
+wrapPlatformConditionalType cond = (PlatformConditional cond)
 unwrapPlatformConditionalType (PlatformConditional cond) = cond

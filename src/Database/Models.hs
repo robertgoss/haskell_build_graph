@@ -15,7 +15,7 @@ import Control.Monad.IO.Class (liftIO)
 
 import Data.Maybe(fromJust)
 
-import Cabal.Conditional(PlatformConditional,unwrapPlatformConditionalType)
+import Cabal.Conditional(PlatformConditional,wrapPlatformConditionalType,unwrapPlatformConditionalType)
 import qualified Cabal.Package as P
 import qualified Database.Fields as Field(Version,PackageName,Dependency,PlatformConditionalType,FlagName)
 
@@ -150,6 +150,22 @@ fromBenchmarkDep :: GlobalBenchmarkDependency -> (PlatformConditional, Field.Dep
 fromBenchmarkDep benDep = (condition, globalBenchmarkDependencyDependance benDep)
   where condition = unwrapPlatformConditionalType $ globalBenchmarkDependencyCondition benDep
 
+--Convert a library id and (condition, dependancy pair) into a library dependence
+toLibraryDep :: GlobalLibraryId -> (PlatformConditional, Field.Dependency) -> GlobalLibraryDependency
+toLibraryDep libId (conditional, dependency) = GlobalLibraryDependency libId (wrapPlatformConditionalType conditional) dependency
+
+--Convert a library id and (condition, dependancy pair) into a library dependence
+toExecutableDep :: GlobalExecutableId -> (PlatformConditional, Field.Dependency) -> GlobalExecutableDependency
+toExecutableDep exeId (conditional, dependency) = GlobalExecutableDependency exeId (wrapPlatformConditionalType conditional) dependency
+
+--Convert a test id and (condition, dependancy pair) into a test dependence
+toTestDep :: GlobalTestId -> (PlatformConditional, Field.Dependency) -> GlobalTestDependency
+toTestDep testId (conditional, dependency) = GlobalTestDependency testId (wrapPlatformConditionalType conditional) dependency
+
+--Convert a benchmark id and (condition, dependancy pair) into a benchmark dependence
+toBenchmarkDep :: GlobalBenchmarkId -> (PlatformConditional, Field.Dependency) -> GlobalBenchmarkDependency
+toBenchmarkDep benId (conditional, dependency) = GlobalBenchmarkDependency benId (wrapPlatformConditionalType conditional) dependency
+
 --Convert a flag model  to a package flag
 fromFlag :: Flag -> PD.Flag
 fromFlag flag = PD.MkFlag {
@@ -224,3 +240,50 @@ getGlobalPackage name version = do --Get package then build targets
                      P.benchmarkTargetName = globalBenchmarkName $ entityVal benchmarkEntity,
                      P.benchmarkBuildDependencies = dependences
                    }
+
+--Query for inserting global package
+addGlobalPackage globalPackage =
+    do --Seperate package identifier from name and version
+       let name = P.name $ P.globalProperties globalPackage
+           version = P.version $ P.globalProperties globalPackage
+           globalData = fromGlobalPackageDataModel $ P.globalProperties globalPackage
+       --Insert global package data
+       globalDataId <- insert globalData
+       packageId <- insert $ GlobalPackage name version globalDataId
+       --if there is library insert it
+       case (P.library globalPackage) of
+           Nothing -> return ()
+           Just library -> insertGlobalLibrary packageId library
+       
+       return ()
+    where --Insert a global library from cabal library
+          --Incude ref to the parent global package
+          --Then insert dependencies
+          insertGlobalLibrary packageId library = 
+                  do libraryId <- insert $ GlobalLibrary packageId
+                     let libraryDeps = map (toLibraryDep libraryId) $ P.libraryBuildDependencies library
+                     insertMany_ libraryDeps
+          --Insert a global executable from cabal executable
+          --Incude ref to the parent global package
+          --Then insert dependencies
+          insertGlobalExecutable packageId executable = 
+                  do let name = P.executableTargetName executable
+                     executableId <- insert $ GlobalExecutable name packageId
+                     let executableDeps = map (toExecutableDep executableId) $ P.executableBuildDependencies executable
+                     insertMany_ executableDeps
+          --Insert a global test from cabal test
+          --Incude ref to the parent global package
+          --Then insert dependencies
+          insertGlobalTest packageId test = 
+                  do let name = P.testTargetName test
+                     testId <- insert $ GlobalTest name packageId
+                     let testDeps = map (toTestDep testId) $ P.testBuildDependencies test
+                     insertMany_ testDeps
+          --Insert a global benchmark from cabal benchmark
+          --Incude ref to the parent global package
+          --Then insert dependencies
+          insertBenchamrkExecutable packageId benchmark = 
+                  do let name = P.benchmarkTargetName benchmark
+                     benchmarkId <- insert $ GlobalBenchmark name packageId
+                     let benchmarkDeps = map (toBenchmarkDep benchmarkId) $ P.benchmarkBuildDependencies benchmark
+                     insertMany_ benchmarkDeps
