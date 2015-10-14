@@ -11,7 +11,6 @@ module Database.Fields(Version,PackageName,
 
 import Database.Persist
 import Database.Persist.TH
-import Database.Persist.Sqlite
 import Control.Monad.IO.Class (liftIO)
 
 import Cabal.Conditional(PlatformConditionalType)

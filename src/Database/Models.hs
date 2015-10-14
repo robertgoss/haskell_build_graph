@@ -10,7 +10,6 @@ module Database.Models where
 
 import Database.Persist
 import Database.Persist.TH
-import Database.Persist.Sqlite
 import Control.Monad.IO.Class (liftIO)
 
 import Data.Maybe(fromJust)
@@ -262,7 +261,8 @@ addGlobalPackage globalPackage =
           insertGlobalLibrary packageId library = 
                   do libraryId <- insert $ GlobalLibrary packageId
                      let libraryDeps = map (toLibraryDep libraryId) $ P.libraryBuildDependencies library
-                     insertMany_ libraryDeps
+                     insertMany libraryDeps
+                     return () --Fit null return type.
           --Insert a global executable from cabal executable
           --Incude ref to the parent global package
           --Then insert dependencies
@@ -270,7 +270,7 @@ addGlobalPackage globalPackage =
                   do let name = P.executableTargetName executable
                      executableId <- insert $ GlobalExecutable name packageId
                      let executableDeps = map (toExecutableDep executableId) $ P.executableBuildDependencies executable
-                     insertMany_ executableDeps
+                     insertMany executableDeps
           --Insert a global test from cabal test
           --Incude ref to the parent global package
           --Then insert dependencies
@@ -278,7 +278,7 @@ addGlobalPackage globalPackage =
                   do let name = P.testTargetName test
                      testId <- insert $ GlobalTest name packageId
                      let testDeps = map (toTestDep testId) $ P.testBuildDependencies test
-                     insertMany_ testDeps
+                     insertMany testDeps
           --Insert a global benchmark from cabal benchmark
           --Incude ref to the parent global package
           --Then insert dependencies
@@ -286,4 +286,4 @@ addGlobalPackage globalPackage =
                   do let name = P.benchmarkTargetName benchmark
                      benchmarkId <- insert $ GlobalBenchmark name packageId
                      let benchmarkDeps = map (toBenchmarkDep benchmarkId) $ P.benchmarkBuildDependencies benchmark
-                     insertMany_ benchmarkDeps
+                     insertMany benchmarkDeps
