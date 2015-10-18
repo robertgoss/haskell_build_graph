@@ -21,6 +21,10 @@ import qualified Database.Fields as Field(OS,Arch,CompilerVersion
 
 import qualified Distribution.PackageDescription as PD
 
+import Cabal.Conditional(FlagConditional
+                        ,wrapFlagConditionalType
+                        ,unwrapFlagConditionalType)
+
 import Database.GlobalModels
 
 --Construct the database models for the platform dependent data structures used in the cabal models
@@ -80,3 +84,46 @@ PlatformBenchmarkDependency
   condition Field.FlagConditionalType
   dependance Field.Dependency
 |]
+
+--Convert to/from platform models
+
+--Convert a library dependance into a (condition, dependancy pair)
+fromPlatformLibraryDep :: PlatformLibraryDependency -> (FlagConditional, Field.Dependency)
+fromPlatformLibraryDep libDep = (condition, platformLibraryDependencyDependance libDep)
+  where condition = unwrapFlagConditionalType $ platformLibraryDependencyCondition libDep
+
+  --Convert a executable dependance into a (condition, dependancy pair)
+fromPlatformExecutableDep :: PlatformExecutableDependency -> (FlagConditional, Field.Dependency)
+fromPlatformExecutableDep exeDep = (condition, platformExecutableDependencyDependance exeDep)
+  where condition = unwrapFlagConditionalType $ platformExecutableDependencyCondition exeDep
+  
+--Convert a test dependance into a (condition, dependancy pair)
+fromPlatformTestDep :: PlatformTestDependency -> (FlagConditional, Field.Dependency)
+fromPlatformTestDep tstDep = (condition, platformTestDependencyDependance tstDep)
+  where condition = unwrapFlagConditionalType $ platformTestDependencyCondition tstDep
+  
+--Convert a benchmark dependance into a (condition, dependancy pair)
+fromPlatformBenchmarkDep :: PlatformBenchmarkDependency -> (FlagConditional, Field.Dependency)
+fromPlatformBenchmarkDep benDep = (condition, platformBenchmarkDependencyDependance benDep)
+  where condition = unwrapFlagConditionalType $ platformBenchmarkDependencyCondition benDep
+
+--Convert a library id and (condition, dependancy pair) into a library dependence
+toPlatformLibraryDep :: PlatformLibraryId -> (FlagConditional, Field.Dependency) -> PlatformLibraryDependency
+toPlatformLibraryDep libId (conditional, dependency) 
+       = PlatformLibraryDependency libId (wrapFlagConditionalType conditional) dependency
+       
+--Convert a executable id and (condition, dependancy pair) into a executable dependence
+toPlatformExecutableDep :: PlatformExecutableId -> (FlagConditional, Field.Dependency) -> PlatformExecutableDependency
+toPlatformExecutableDep exeId (conditional, dependency) 
+       = PlatformExecutableDependency exeId (wrapFlagConditionalType conditional) dependency
+       
+--Convert a test id and (condition, dependancy pair) into a test dependence
+toPlatformTestDep :: PlatformTestId -> (FlagConditional, Field.Dependency) -> PlatformTestDependency
+toPlatformTestDep tstId (conditional, dependency) 
+       = PlatformTestDependency tstId (wrapFlagConditionalType conditional) dependency
+       
+--Convert a benchmark id and (condition, dependancy pair) into a benchmark dependence
+toPlatformBenchmarkDep :: PlatformBenchmarkId -> (FlagConditional, Field.Dependency) -> PlatformBenchmarkDependency
+toPlatformBenchmarkDep benId (conditional, dependency) 
+       = PlatformBenchmarkDependency benId (wrapFlagConditionalType conditional) dependency
+
