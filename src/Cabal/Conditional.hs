@@ -73,6 +73,11 @@ changeVars varChange (And cond1 cond2)
          = And (changeVars varChange cond1) (changeVars varChange cond2)
 --The conditionals possible conditionals that cabal can ask of the configuration flags
 type FlagConditional = ConditionalTree FlagBasicConditional
+--Newtype container for a platform conditional
+newtype FlagConditionalType = FlagConditional FlagConditional deriving(Eq,Show,Read)
+wrapFlagConditionalType cond = (FlagConditional cond)
+unwrapFlagConditionalType (FlagConditional cond) = cond
+
 
 --The conditionals possible conditionals that cabal can ask of the platform or the configuration flags
 type PlatformConditional = ConditionalTree (Either PlatformBasicConditional FlagBasicConditional)
