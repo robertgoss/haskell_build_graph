@@ -93,20 +93,21 @@ PlatformBenchmarkDependency
 
 --Convert to from platform with unique name
 
-toPlatform :: String -> P.Platform -> Platform
-toPlatform name platform = Platform {
+toPlatform :: P.Platform -> Platform
+toPlatform platform = Platform {
   platformOs = P.operatingSystem platform,
   platformArch = P.architecture platform,
   platformCompiler = P.compiler platform,
-  platformName = name
+  platformName = P.globalPlatformName platform
 }
 
-fromPlatform :: Platform -> (String, P.Platform)
-fromPlatform platformM = (platformName platformM, platform)
+fromPlatform :: Platform -> P.Platform
+fromPlatform platformM = platform
   where platform = P.Platform {
            P.operatingSystem = platformOs platformM,
            P.architecture = platformArch platformM,
-           P.compiler = platformCompiler platformM
+           P.compiler = platformCompiler platformM,
+           P.globalPlatformName = platformName platformM
         }
 
 --Convert a library dependance into a (condition, dependancy pair)
@@ -152,9 +153,9 @@ toPlatformBenchmarkDep benId (conditional, dependency)
 --Querys for getting a platform
 --Looks up using the unique platform name
 getPlatform name = do platformEntity <- fmap fromJust . getBy $ UniquePlatformName name
-                      return . snd . fromPlatform $ entityVal platformEntity
+                      return . fromPlatform $ entityVal platformEntity
 --Insert platform with given unique name       
-insertPlatform name platform = insert $ toPlatform name platform
+insertPlatform platform = insert $ toPlatform platform
 
 
 --Query for getting a package specified down to a package
@@ -238,3 +239,4 @@ getPlatformPackage platformName name version
                  Package.benchmarkBuildDependencies = dependencies
                }
                       
+--Query to insert a platform package
