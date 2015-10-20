@@ -179,21 +179,25 @@ fromFlag flag = PD.MkFlag {
 --Big set of queries as need many invere maps
 getGlobalPackage name version = do --Get package then build targets
                                    pkgEntity <- fmap fromJust . getBy $ PackageIdentifier name version
+                                   getGlobalPackageFromId $ entityKey pkgEntity
+getGlobalPackageFromId pkgKey = do pkgVal <- fmap fromJust $ get pkgKey
+                                   let name = globalPackageName pkgVal
+                                       version = globalPackageVersion pkgVal
                                    --Get global data
-                                   globalPackageData <- fmap fromJust . get . globalPackagePackageData $ entityVal pkgEntity
+                                   globalPackageData <- fmap fromJust . get . globalPackagePackageData $ pkgVal
                                    --Get library (maybe)
-                                   libraryM <- getGlobalLibrary $ entityKey pkgEntity
+                                   libraryM <- getGlobalLibrary $ pkgKey
                                    --Get executables
-                                   executableEnities <- selectList [GlobalExecutablePackage ==. entityKey pkgEntity] []
+                                   executableEnities <- selectList [GlobalExecutablePackage ==. pkgKey] []
                                    executables <- mapM getGlobalExecutable executableEnities
                                    --Get test
-                                   testEnities <- selectList [GlobalTestPackage ==. entityKey pkgEntity] []
+                                   testEnities <- selectList [GlobalTestPackage ==. pkgKey] []
                                    tests <- mapM getGlobalTest testEnities
                                    --Get benchmark
-                                   benchmarkEnities <- selectList [GlobalBenchmarkPackage ==. entityKey pkgEntity] []
+                                   benchmarkEnities <- selectList [GlobalBenchmarkPackage ==. pkgKey] []
                                    benchmarks <- mapM getGlobalBenchmark benchmarkEnities
                                    --Get flags
-                                   flagEnities <- selectList [FlagPackage ==. entityKey pkgEntity] []
+                                   flagEnities <- selectList [FlagPackage ==. pkgKey] []
                                    let flags  = map (fromFlag . entityVal) flagEnities
                                    --Return package
                                    return P.Package {
