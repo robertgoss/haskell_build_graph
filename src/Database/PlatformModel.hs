@@ -16,6 +16,7 @@ import Control.Monad.IO.Class (liftIO)
 import Data.Maybe(fromJust)
 
 import qualified Cabal.Platform as P
+import qualified Cabal.Package as Package
 import qualified Database.Fields as Field(OS,Arch,CompilerVersion
                                          ,Dependency, FlagConditionalType)
 
@@ -26,6 +27,7 @@ import Cabal.Conditional(FlagConditional
                         ,unwrapFlagConditionalType)
 
 import Database.GlobalModels
+import Control.Applicative ((<$>))
 
 --Construct the database models for the platform dependent data structures used in the cabal models
 --Add interfaces between them
@@ -44,7 +46,7 @@ Platform
 --Localised build targets
 PlatformPackage
   platform PlatformId
-  globalPackage GlobalPackage
+  globalPackage GlobalPackageId
   PlatformPackageIdentifier platform globalPackage --The combination of package 
                                                    --And platform should be unique.
 --Build targets and dependencies
@@ -155,4 +157,84 @@ getPlatform name = do platformEntity <- fmap fromJust . getBy $ UniquePlatformNa
 insertPlatform name platform = insert $ toPlatform name platform
 
 
+--Query for getting a package specified down to a package
+--Takes the platform name and the name/version pair of the package
+getPlatformPackage platformName name version
+       = do platformEntity <- fmap fromJust . getBy $ UniquePlatformName platformName
+            globalPkgEntity <- fmap fromJust . getBy $ PackageIdentifier name version
+            let platformId = entityKey platformEntity
+                globalPkgId = entityKey globalPkgEntity
+            --Get package from the global package and platform
+            packageEntity <- fmap fromJust . getBy $ PlatformPackageIdentifier platformId globalPkgId
+            let packageKey = entityKey packageEntity
+            --Get global package data
+            globalPackageData <- fmap fromJust . get . globalPackagePackageData $ entityVal globalPkgEntity
+            --Get build targets
+            libraryM <- getPlatformLibrary packageKey
+            --Get executable build targets
+            executableEntities <- selectList [PlatformExecutablePackage ==. packageKey] []
+            executables <- mapM getPlatformExecutable executableEntities
+            --Get test build targets
+            testEntities <- selectList [PlatformTestPackage ==. packageKey] []
+            tests <- mapM getPlatformTest testEntities
+            --Get benchmark build targets
+            benchmarkEntities <- selectList [PlatformBenchmarkPackage ==. packageKey] []
+            benchmarks <- mapM getPlatformBenchmark benchmarkEntities
+            --Get flags
+            flagEnities <- selectList [FlagPackage ==. globalPkgId] []
+            let flags  = map (fromFlag . entityVal) flagEnities
+            --First the 
+            return Package.Package {
+               Package.globalProperties = toGlobalPackageData name version globalPackageData,
+               Package.library = libraryM,
+               Package.executables = executables,
+               Package.tests = tests,
+               Package.benchmarks = benchmarks,
+               Package.flags = flags
+            }
+  where getPlatformLibrary packageKey =
+            do libraryEntityM <- getBy $ PlatformLibraryUniquePackage packageKey
+               return Nothing
+               case libraryEntityM of
+                  Nothing -> return Nothing
+                  Just libraryEntity -> do --Get dependencies
+                                           let libraryKey = entityKey libraryEntity
+                                           dependencyEntities <- selectList [PlatformLibraryDependencyLibrary ==. libraryKey] []
+                                           let dependencies = map (fromPlatformLibraryDep . entityVal) dependencyEntities
+                                           return $ Just Package.Library {
+                                             Package.libraryBuildDependencies = dependencies
+                                           }
+        getPlatformExecutable executableEntity =
+            do let executableKey = entityKey executableEntity
+                   globalExecutableKey = platformExecutableGlobalExecutable $ entityVal executableEntity
+               globalExecutableEntity <- fromJust <$> get globalExecutableKey
+               let executableName = globalExecutableName globalExecutableEntity
+               dependencyEntities <- selectList [PlatformExecutableDependencyExecutable ==. executableKey] []
+               let dependencies = map (fromPlatformExecutableDep . entityVal) dependencyEntities
+               return Package.Executable {
+                 Package.executableTargetName = executableName,
+                 Package.executableBuildDependencies = dependencies
+               }
+        getPlatformTest testEntity =
+            do let testKey = entityKey testEntity
+                   globalTestKey = platformTestGlobalTest $ entityVal testEntity
+               globalTestEntity <- fromJust <$> get globalTestKey
+               let testName = globalTestName globalTestEntity
+               dependencyEntities <- selectList [PlatformTestDependencyTest ==. testKey] []
+               let dependencies = map (fromPlatformTestDep . entityVal) dependencyEntities
+               return Package.TestSuite {
+                 Package.testTargetName = testName,
+                 Package.testBuildDependencies = dependencies
+               }
+        getPlatformBenchmark benchmarkEntity =
+            do let benchmarkKey = entityKey benchmarkEntity
+                   globalBenchmarkKey = platformBenchmarkGlobalBenchmark $ entityVal benchmarkEntity
+               globalBenchmarkEntity <- fromJust <$> get globalBenchmarkKey
+               let benchmarkName = globalBenchmarkName globalBenchmarkEntity
+               dependencyEntities <- selectList [PlatformBenchmarkDependencyBenchmark ==. benchmarkKey] []
+               let dependencies = map (fromPlatformBenchmarkDep . entityVal) dependencyEntities
+               return Package.Benchmark {
+                 Package.benchmarkTargetName = benchmarkName,
+                 Package.benchmarkBuildDependencies = dependencies
+               }
                       
