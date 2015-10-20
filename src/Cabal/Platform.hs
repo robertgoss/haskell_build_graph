@@ -11,12 +11,13 @@ import Cabal.Conditional(CompilerVersion
 
 --A data structure to represent a given platform that packages
 -- Can be configured and built on.
---Includes the basic tests that cn be performed in a cabal file
+--Includes the basic tests that can be performed in a cabal file
 
 data Platform = Platform {
   operatingSystem :: OS,
   architecture :: Arch,
-  compiler :: CompilerVersion
+  compiler :: CompilerVersion,
+  globalPlatformName :: String -- A globally unique name for this build platform.
 } 
 
 --Localise a platform conditional by 
