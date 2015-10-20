@@ -1,5 +1,12 @@
 module Cabal.Platform where
 
+import Cabal.Package(GlobalPackage,PlatformPackage,
+                     PackageConditional(..),
+                     Library(..),
+                     Executable(..),
+                     TestSuite(..),
+                     Benchmark(..))
+
 import Distribution.System(OS,Arch)
 import Cabal.Conditional(CompilerVersion
                         ,PlatformBasicConditional(..)
@@ -8,6 +15,7 @@ import Cabal.Conditional(CompilerVersion
                         ,FlagConditional
                         ,unwrapPlatformConditionalType,
                         ConditionalTree(..), simplifyTree, changeVars)
+import Control.Applicative ((<$>))
 
 --A data structure to represent a given platform that packages
 -- Can be configured and built on.
@@ -32,3 +40,29 @@ localiseConditional platform condTree = simplifyTree $ changeVars localiseVars c
 
 localiseConditionalType :: Platform -> PlatformConditionalType -> FlagConditional
 localiseConditionalType platform = localiseConditional platform . unwrapPlatformConditionalType
+
+localisePackage :: Platform -> GlobalPackage -> PlatformPackage
+localisePackage platform globalPackage = Package{
+  globalProperties = globalProperties globalPackage,
+  library = localiseLibrary <$> library globalPackage,
+  executables = map localiseExecutable $ executables globalPackage,
+  tests = map localiseTest $ tests globalPackage,
+  benchmarks = map localiseBenchmark $ benchmarks globalPackage,
+  flags = flags globalPackage
+}
+   where localiseLibrary globalLibrary = Library {
+                                           libraryBuildDependencies = map localDep $ libraryBuildDependencies globalLibrary
+                                         }
+         localiseExecutable globalExe = Executable {
+                                           executableTargetName = executableTargetName globalExe,
+                                           executableBuildDependencies = map localDep $ executableBuildDependencies globalExe
+                                        }
+         localiseTest globalTest = TestSuite {
+                                      testTargetName = testTargetName globalTest,
+                                      testBuildDependencies = map localDep $ testBuildDependencies globalTest
+                                   }
+         localiseBenchmark globalBen = Benchmark {
+                                         benchmarkTargetName = benchmarkTargetName globalBen,
+                                         benchmarkBuildDependencies = map localDep $ benchmarkBuildDependencies globalBen
+                                       }
+         localDep (cond,dep) = (localiseConditional platform cond,dep)

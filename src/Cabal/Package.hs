@@ -33,7 +33,8 @@ data PackageConditional conditional = Package {
 --Helper type
 -- The package has had no conditionals resolved is it not specifed to a platform
 type GlobalPackage = PackageConditional PlatformConditional
-
+-- The package has had conditionals resolved to a platform but not flags
+type PlatformPackage = PackageConditional FlagConditional
 
 --Helper types
 -- Some helper structured types for fields
