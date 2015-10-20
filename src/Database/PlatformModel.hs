@@ -154,8 +154,12 @@ toPlatformBenchmarkDep benId (conditional, dependency)
 --Looks up using the unique platform name
 getPlatform name = do platformEntity <- fmap fromJust . getBy $ UniquePlatformName name
                       return . fromPlatform $ entityVal platformEntity
---Insert platform with given unique name       
-insertPlatform platform = insert $ toPlatform platform
+--Insert platform with given unique name  
+--Do not insert a duplicate in this case return the old key     
+insertPlatform platform = do eitherKey <- insertBy $ toPlatform platform
+                             case eitherKey of
+                                 Left exists -> return (entityKey exists)  
+                                 Right newKey -> return newKey       
 
 
 --Query for getting a package specified down to a package
@@ -239,4 +243,3 @@ getPlatformPackage platformName name version
                  Package.benchmarkBuildDependencies = dependencies
                }
                       
---Query to insert a platform package
