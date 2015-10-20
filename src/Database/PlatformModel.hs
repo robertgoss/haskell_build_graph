@@ -37,6 +37,8 @@ Platform
   os Field.OS
   arch Field.Arch
   compiler Field.CompilerVersion
+  name String --A globally unique name to identify this package
+  UniquePlatformName name
 --Localise a package to a particular platform
 --Contains links back to the relevent global package and has links from 
 --Localised build targets
@@ -87,6 +89,24 @@ PlatformBenchmarkDependency
 
 --Convert to/from platform models
 
+--Convert to from platform with unique name
+
+toPlatform :: String -> P.Platform -> Platform
+toPlatform name platform = Platform {
+  platformOs = P.operatingSystem platform,
+  platformArch = P.architecture platform,
+  platformCompiler = P.compiler platform,
+  platformName = name
+}
+
+fromPlatform :: Platform -> (String, P.Platform)
+fromPlatform platformM = (platformName platformM, platform)
+  where platform = P.Platform {
+           P.operatingSystem = platformOs platformM,
+           P.architecture = platformArch platformM,
+           P.compiler = platformCompiler platformM
+        }
+
 --Convert a library dependance into a (condition, dependancy pair)
 fromPlatformLibraryDep :: PlatformLibraryDependency -> (FlagConditional, Field.Dependency)
 fromPlatformLibraryDep libDep = (condition, platformLibraryDependencyDependance libDep)
@@ -127,3 +147,12 @@ toPlatformBenchmarkDep :: PlatformBenchmarkId -> (FlagConditional, Field.Depende
 toPlatformBenchmarkDep benId (conditional, dependency) 
        = PlatformBenchmarkDependency benId (wrapFlagConditionalType conditional) dependency
 
+--Querys for getting a platform
+--Looks up using the unique platform name
+getPlatform name = do platformEntity <- fmap fromJust . getBy $ UniquePlatformName name
+                      return . snd . fromPlatform $ entityVal platformEntity
+--Insert platform with given unique name       
+insertPlatform name platform = insert $ toPlatform name platform
+
+
+                      
